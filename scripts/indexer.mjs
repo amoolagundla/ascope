@@ -19,7 +19,7 @@ import {
   truncate,
   extractClassName
 } from './utils.mjs';
-import { encoding_for_model } from 'js-tiktoken';
+import { encodingForModel } from 'js-tiktoken';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PLUGIN_ROOT = path.join(__dirname, '..');
@@ -46,7 +46,8 @@ async function index(targetDir, navDir, summariesDir) {
   console.log(`Scanning Angular project: ${targetDir}`);
 
   // Initialize tiktoken encoder for accurate token counting
-  const encoder = encoding_for_model('claude-3-5-sonnet-20241022');
+  // Note: Using gpt-4 tokenizer as proxy for Claude (similar tokenization)
+  const encoder = encodingForModel('gpt-4');
 
   // Verify target directory exists
   if (!fs.existsSync(targetDir)) {
