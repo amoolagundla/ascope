@@ -19,6 +19,7 @@ import {
   truncate,
   extractClassName
 } from './utils.mjs';
+import { encoding_for_model } from 'js-tiktoken';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PLUGIN_ROOT = path.join(__dirname, '..');
@@ -43,6 +44,9 @@ const SUMMARIES_DIR = path.join(NAV_DIR, 'summaries');
  */
 async function index(targetDir, navDir, summariesDir) {
   console.log(`Scanning Angular project: ${targetDir}`);
+
+  // Initialize tiktoken encoder for accurate token counting
+  const encoder = encoding_for_model('claude-3-5-sonnet-20241022');
 
   // Verify target directory exists
   if (!fs.existsSync(targetDir)) {
@@ -113,12 +117,19 @@ async function index(targetDir, navDir, summariesDir) {
       stats.totalHTTP += httpEndpoints.length;
       stats.totalCapacitor += capacitorPlugins.length;
 
+      // Calculate tokens for accurate estimation
+      const tokens = encoder.encode(content);
+      const tokenCount = tokens.length;
+      const fileSizeBytes = content.length;
+
       // Create node
       const node = {
         id: nodeId,
         path: relativePath,
         type: fileType,
         name: className,
+        tokenCount: tokenCount,
+        fileSizeBytes: fileSizeBytes,
         patterns: {
           di: dependencies,
           signals: signalUsage,
@@ -149,11 +160,21 @@ async function index(targetDir, navDir, summariesDir) {
     }
   }
 
+  // Calculate aggregate token statistics
+  const totalTokens = nodes.reduce((sum, n) => sum + (n.tokenCount || 0), 0);
+  const totalBytes = nodes.reduce((sum, n) => sum + (n.fileSizeBytes || 0), 0);
+
   // Write index.json
   const index = {
     version: '1',
     generated: new Date().toISOString(),
     target: targetDir,
+    stats: {
+      totalNodes: nodes.length,
+      totalTokens: totalTokens,
+      totalBytes: totalBytes,
+      avgTokensPerNode: nodes.length > 0 ? Math.round(totalTokens / nodes.length) : 0
+    },
     nodes: nodes
   };
 
@@ -190,6 +211,10 @@ async function index(targetDir, navDir, summariesDir) {
   console.log(`- RxJS: ${stats.totalRxJS}`);
   console.log(`- HTTP: ${stats.totalHTTP}`);
   console.log(`- Capacitor: ${stats.totalCapacitor}`);
+  console.log(`\nToken statistics:`);
+  console.log(`- Total tokens: ${totalTokens.toLocaleString()}`);
+  console.log(`- Total size: ${(totalBytes / 1024).toFixed(2)} KB`);
+  console.log(`- Avg tokens/file: ${nodes.length > 0 ? Math.round(totalTokens / nodes.length) : 0}`);
   console.log(`\nGenerated ${nodes.length} summaries in ${summariesDir}`);
   console.log(`Index ready at ${navDir}`);
 }

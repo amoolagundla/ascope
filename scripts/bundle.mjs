@@ -174,6 +174,20 @@ async function resolveBundle(query, maxNodes = 5) {
   allowlist.push(INDEX_PATH);
   allowlist.push(GRAPH_PATH);
 
+  // Calculate token statistics
+  const bundleTokens = bundleNodes.reduce((sum, n) => sum + (n.tokenCount || 0), 0);
+  const bundleBytes = bundleNodes.reduce((sum, n) => sum + (n.fileSizeBytes || 0), 0);
+
+  // Get total project tokens from index
+  const totalProjectTokens = index.stats?.totalTokens || 0;
+  const totalProjectBytes = index.stats?.totalBytes || 0;
+
+  // Calculate savings
+  const tokenSavings = totalProjectTokens - bundleTokens;
+  const savingsPercent = totalProjectTokens > 0
+    ? ((tokenSavings / totalProjectTokens) * 100).toFixed(1)
+    : 0;
+
   // Create bundle state
   const bundleState = {
     active: true,
@@ -181,7 +195,15 @@ async function resolveBundle(query, maxNodes = 5) {
     bundleId: `bundle:${query.replace(/\s+/g, '-')}:${new Date().toISOString()}`,
     allowlist: allowlist,
     scopeRoot: index.target,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    tokenStats: {
+      bundleTokens: bundleTokens,
+      totalProjectTokens: totalProjectTokens,
+      tokenSavings: tokenSavings,
+      savingsPercent: parseFloat(savingsPercent),
+      bundleFiles: bundleNodes.length,
+      totalProjectFiles: index.nodes.length
+    }
   };
 
   // Write state file
@@ -192,6 +214,10 @@ async function resolveBundle(query, maxNodes = 5) {
   for (const node of bundleNodes) {
     console.log(`- ${node.path} (${node.type})`);
   }
+  console.log(`\nToken Usage (estimated for this fix):`);
+  console.log(`- Bundle will use: ${bundleTokens.toLocaleString()} tokens (${bundleNodes.length} files)`);
+  console.log(`- Full project would use: ${totalProjectTokens.toLocaleString()} tokens (${index.nodes.length} files)`);
+  console.log(`- Savings: ${tokenSavings.toLocaleString()} tokens (${savingsPercent}% reduction)`);
   console.log(`\nBundle active. PreToolUse hook enforcing scope.`);
   console.log(`Bundle ID: ${bundleState.bundleId}`);
 

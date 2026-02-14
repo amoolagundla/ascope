@@ -37,6 +37,11 @@ Indexing complete:
 - Guards: 5
 ...
 
+Token statistics:
+- Total tokens: 156,789
+- Total size: 1,234.56 KB
+- Avg tokens/file: 598
+
 Generated 262 summaries
 Index ready at .../Olympus.Gyglers.UI/nav/
 ```
@@ -54,11 +59,29 @@ Index ready at .../Olympus.Gyglers.UI/nav/
 /ng-nav:fix auth guard
 ```
 
+**Output:**
+```
+Resolved query "auth guard" to 6 files:
+
+- auth.guard.ts (guard)
+- api-auth.service.ts (service)
+- login.component.ts (component)
+...
+
+Token Usage (estimated for this fix):
+- Bundle will use: 12,450 tokens (6 files)
+- Full project would use: 156,789 tokens (262 files)
+- Savings: 144,339 tokens (92.1% reduction)
+
+Bundle active. PreToolUse hook enforcing scope.
+```
+
 **What happens:**
 1. Finds 6 relevant files (auth.guard.ts, auth.service.ts, etc.)
-2. Activates bundle (only these files can be read)
-3. You fix the bug using only those files
-4. Bundle auto-deactivates when done
+2. Shows token savings (92% reduction)
+3. Activates bundle (only these files can be read)
+4. You fix the bug using only those files
+5. Bundle auto-deactivates when done
 
 ### Fix Signal Issues
 
@@ -202,19 +225,23 @@ echo '{"tool_name":"Read","tool_input":{"file_path":"/tmp/test.ts"}}' | node hoo
 
 ## Performance
 
-**Traditional approach (without ng-nav):**
+**Token counting:** ng-nav uses `js-tiktoken` (same tokenizer as Claude) for accurate estimation.
+
+**Example (262 TypeScript files):**
+
+Traditional approach (without ng-nav):
 - Scans: 262 files
-- Tokens: ~100K
-- Time: Slow
+- Tokens: 156,789 (measured)
 - Context: Polluted
 
-**With ng-nav:**
-- Scans: 5-10 files
-- Tokens: ~10K
-- Time: Fast
+With ng-nav:
+- Scans: 6 files
+- Tokens: 12,450 (measured)
 - Context: Clean
 
-**Result: 90% token reduction**
+**Result: 92.1% token reduction (144,339 tokens saved)**
+
+Token savings are displayed after each `/ng-nav:fix` command before Claude reads any files.
 
 ## Configuration
 

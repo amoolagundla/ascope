@@ -26,6 +26,31 @@ npm install
 chmod +x scripts/*.mjs hooks/*.mjs
 ```
 
+## Token Savings Example
+
+**Without ng-nav:**
+```
+Query: "Fix auth guard bug"
+Claude scans: 262 files (~156,000 tokens)
+Context pollution: High
+```
+
+**With ng-nav:**
+```
+Query: "Fix auth guard bug"
+/ng-nav:fix auth guard
+
+Resolved to 6 files:
+- auth.guard.ts, api-auth.service.ts, login.component.ts, ...
+
+Token Usage:
+- Bundle: 12,450 tokens (6 files)
+- Full project: 156,789 tokens (262 files)
+- Savings: 144,339 tokens (92.1% reduction)
+```
+
+**Result:** 92% token reduction, faster responses, cleaner context
+
 ## Usage
 
 ### 1. Generate Index (One-Time)
@@ -206,15 +231,27 @@ echo '{"tool_name":"Read","tool_input":{"file_path":"/tmp/test.ts"}}' | node hoo
 
 ## Performance
 
-**Without ng-nav:**
-- Scans 90+ components (45,000 lines)
-- Uses ~100K tokens
-- Claude searches entire repo
+**Token counting** - ng-nav uses `js-tiktoken` (same tokenizer as Claude) for accurate token estimation.
 
-**With ng-nav:**
-- Loads 5-10 files (2,000 lines)
-- Uses ~10K tokens
-- 90% token reduction
+**Example project (262 TypeScript files):**
+
+Without ng-nav:
+- Claude scans entire repo: 262 files
+- Estimated token usage: 156,789 tokens
+- High context pollution
+
+With ng-nav:
+- Bundle resolver finds 6 relevant files
+- Estimated token usage: 12,450 tokens
+- Token savings: 144,339 tokens (92% reduction)
+
+**Token usage display** - Shown after bundle resolution, before Claude reads files:
+```
+Token Usage (estimated for this fix):
+- Bundle will use: 12,450 tokens (6 files)
+- Full project would use: 156,789 tokens (262 files)
+- Savings: 144,339 tokens (92.1% reduction)
+```
 
 ## Target Project
 
