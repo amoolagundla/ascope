@@ -1,0 +1,16 @@
+{
+  "description": "ng-nav PreToolUse guard - enforce bundle-scoped access",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/pretooluse.mjs",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

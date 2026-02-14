@@ -1,0 +1,8 @@
+{
+  "name": "ng-nav",
+  "description": "Angular navigation index with bundle-scoped file access",
+  "author": {
+    "name": "knimi",
+    "email": "dev@gygler.com"
+  }
+}

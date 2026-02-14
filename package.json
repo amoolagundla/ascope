@@ -1,0 +1,15 @@
+{
+  "name": "ng-nav",
+  "version": "1.0.0",
+  "description": "Angular navigation index with bundle-scoped file access",
+  "type": "module",
+  "scripts": {
+    "index": "node scripts/indexer.mjs",
+    "bundle": "node scripts/bundle.mjs"
+  },
+  "author": "knimi",
+  "license": "MIT",
+  "dependencies": {
+    "glob": "^13.0.3"
+  }
+}
