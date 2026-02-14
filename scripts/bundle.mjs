@@ -6,7 +6,28 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PLUGIN_ROOT = path.join(__dirname, '..');
-const NAV_DIR = path.join(PLUGIN_ROOT, 'nav');
+
+// Auto-detect nav directory: prefer local project nav/, fallback to plugin nav/
+function findNavDir() {
+  const cwd = process.cwd();
+
+  // Check current directory for nav/
+  const localNav = path.join(cwd, 'nav');
+  if (fs.existsSync(path.join(localNav, 'index.json'))) {
+    return localNav;
+  }
+
+  // Check parent directory for nav/ (in case we're in src/)
+  const parentNav = path.join(cwd, '..', 'nav');
+  if (fs.existsSync(path.join(parentNav, 'index.json'))) {
+    return parentNav;
+  }
+
+  // Fallback to plugin directory
+  return path.join(PLUGIN_ROOT, 'nav');
+}
+
+const NAV_DIR = findNavDir();
 const INDEX_PATH = path.join(NAV_DIR, 'index.json');
 const GRAPH_PATH = path.join(NAV_DIR, 'graph.json');
 const STATE_PATH = path.join(NAV_DIR, '.ng-nav-state.json');

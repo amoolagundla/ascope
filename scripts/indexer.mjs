@@ -22,13 +22,26 @@ import {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PLUGIN_ROOT = path.join(__dirname, '..');
-const NAV_DIR = path.join(PLUGIN_ROOT, 'nav');
+
+// Check for --output flag to store nav files in project directory
+let NAV_DIR = path.join(PLUGIN_ROOT, 'nav');
+let OUTPUT_IN_PROJECT = false;
+
+const outputFlagIndex = process.argv.indexOf('--output');
+if (outputFlagIndex !== -1 && process.argv[outputFlagIndex + 1]) {
+  NAV_DIR = path.resolve(process.argv[outputFlagIndex + 1]);
+  OUTPUT_IN_PROJECT = true;
+} else if (process.argv.includes('--local')) {
+  // Auto-detect: store nav/ next to target directory
+  OUTPUT_IN_PROJECT = true;
+}
+
 const SUMMARIES_DIR = path.join(NAV_DIR, 'summaries');
 
 /**
  * Main indexer - scan Angular codebase and generate navigation artifacts
  */
-async function index(targetDir) {
+async function index(targetDir, navDir, summariesDir) {
   console.log(`Scanning Angular project: ${targetDir}`);
 
   // Verify target directory exists
@@ -129,7 +142,7 @@ async function index(targetDir) {
       }
 
       // Generate summary
-      await generateSummary(node, content, filePath);
+      await generateSummary(node, content, filePath, summariesDir);
 
     } catch (error) {
       console.warn(`Warning: Failed to process ${filePath}: ${error.message}`);
@@ -145,7 +158,7 @@ async function index(targetDir) {
   };
 
   fs.writeFileSync(
-    path.join(NAV_DIR, 'index.json'),
+    path.join(navDir, 'index.json'),
     JSON.stringify(index, null, 2)
   );
 
@@ -156,7 +169,7 @@ async function index(targetDir) {
   };
 
   fs.writeFileSync(
-    path.join(NAV_DIR, 'graph.json'),
+    path.join(navDir, 'graph.json'),
     JSON.stringify(graph, null, 2)
   );
 
@@ -177,16 +190,16 @@ async function index(targetDir) {
   console.log(`- RxJS: ${stats.totalRxJS}`);
   console.log(`- HTTP: ${stats.totalHTTP}`);
   console.log(`- Capacitor: ${stats.totalCapacitor}`);
-  console.log(`\nGenerated ${nodes.length} summaries in ${SUMMARIES_DIR}`);
-  console.log(`Index ready at ${NAV_DIR}`);
+  console.log(`\nGenerated ${nodes.length} summaries in ${summariesDir}`);
+  console.log(`Index ready at ${navDir}`);
 }
 
 /**
  * Generate markdown summary for a node
  */
-async function generateSummary(node, content, filePath) {
+async function generateSummary(node, content, filePath, summariesDir) {
   const summaryFileName = node.id.replace(/:/g, '__') + '.md';
-  const summaryPath = path.join(SUMMARIES_DIR, summaryFileName);
+  const summaryPath = path.join(summariesDir, summaryFileName);
 
   // Build summary content
   let summary = `# ${node.name}\n\n`;
@@ -264,18 +277,35 @@ async function generateSummary(node, content, filePath) {
 }
 
 // Main execution
-const targetDir = process.argv[2] || process.cwd();
+const args = process.argv.slice(2).filter(arg => !arg.startsWith('--'));
+const targetDir = args[0] || process.cwd();
 const resolvedTarget = path.resolve(targetDir);
+
+// If --local flag, set NAV_DIR to project root
+if (OUTPUT_IN_PROJECT && !process.argv.includes('--output')) {
+  // Find project root (parent of src/app or just parent of target)
+  let projectRoot = resolvedTarget;
+  if (resolvedTarget.endsWith('/src/app') || resolvedTarget.endsWith('\\src\\app')) {
+    projectRoot = path.resolve(resolvedTarget, '../..');
+  } else if (resolvedTarget.endsWith('/app') || resolvedTarget.endsWith('\\app')) {
+    projectRoot = path.resolve(resolvedTarget, '../..');
+  }
+  NAV_DIR = path.join(projectRoot, 'nav');
+  console.log(`Using local project directory: ${NAV_DIR}`);
+}
+
+// Update SUMMARIES_DIR to use the resolved NAV_DIR (not the top-level constant)
+const SUMMARIES_DIR_FINAL = path.join(NAV_DIR, 'summaries');
 
 // Ensure nav directories exist
 if (!fs.existsSync(NAV_DIR)) {
   fs.mkdirSync(NAV_DIR, { recursive: true });
 }
-if (!fs.existsSync(SUMMARIES_DIR)) {
-  fs.mkdirSync(SUMMARIES_DIR, { recursive: true });
+if (!fs.existsSync(SUMMARIES_DIR_FINAL)) {
+  fs.mkdirSync(SUMMARIES_DIR_FINAL, { recursive: true });
 }
 
-index(resolvedTarget).catch(error => {
+index(resolvedTarget, NAV_DIR, SUMMARIES_DIR_FINAL).catch(error => {
   console.error(`Fatal error: ${error.message}`);
   process.exit(1);
 });

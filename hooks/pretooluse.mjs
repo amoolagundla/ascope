@@ -5,7 +5,28 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const STATE_FILE = path.join(__dirname, '../nav/.ng-nav-state.json');
+
+// Auto-detect state file: prefer local project nav/, fallback to plugin nav/
+function findStateFile() {
+  const cwd = process.cwd();
+
+  // Check current directory for nav/
+  const localState = path.join(cwd, 'nav', '.ng-nav-state.json');
+  if (fs.existsSync(localState)) {
+    return localState;
+  }
+
+  // Check parent directory for nav/ (in case we're in src/)
+  const parentState = path.join(cwd, '..', 'nav', '.ng-nav-state.json');
+  if (fs.existsSync(parentState)) {
+    return parentState;
+  }
+
+  // Fallback to plugin directory
+  return path.join(__dirname, '../nav/.ng-nav-state.json');
+}
+
+const STATE_FILE = findStateFile();
 
 // Read hook input from stdin
 let inputData = '';

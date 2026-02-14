@@ -30,19 +30,31 @@ chmod +x scripts/*.mjs hooks/*.mjs
 
 ### 1. Generate Index (One-Time)
 
+**Option A: Store in Project (Recommended)**
+```bash
+/ng-nav:index /path/to/angular/project/src/app --local
+```
+
+**Option B: Store in Plugin Directory**
 ```bash
 /ng-nav:index /path/to/angular/project/src/app
 ```
 
-**Example:**
+**Example (local storage):**
 ```bash
-/ng-nav:index /mnt/c/Users/knimi/OneDrive/Documents/Gyglers.UI/Olympus.Gyglers.UI/src/app
+/ng-nav:index /mnt/c/Users/knimi/OneDrive/Documents/Gyglers.UI/Olympus.Gyglers.UI/src/app --local
 ```
 
-**Output:**
-- `nav/index.json` - Node catalog (components, services, guards)
-- `nav/graph.json` - Dependency graph
-- `nav/summaries/*.md` - Per-node summaries (4500 char max)
+**Output (with --local):**
+- `<project-root>/nav/index.json` - Node catalog (components, services, guards)
+- `<project-root>/nav/graph.json` - Dependency graph
+- `<project-root>/nav/summaries/*.md` - Per-node summaries (4500 char max)
+- `<project-root>/nav/.gitignore` - Excludes artifacts from git
+
+**Output (without --local):**
+- `~/.claude/plugins/repos/ng-nav/nav/*` - All files in plugin directory
+
+**Recommendation:** Use `--local` to keep index with your project. Each developer can generate their own index.
 
 ### 2. Fix Issues with Bundle
 

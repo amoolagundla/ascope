@@ -15,12 +15,19 @@ Already installed at: `~/.claude/plugins/repos/ng-nav/`
 
 ### Step 1: Generate Navigation Index
 
+**With local storage (recommended):**
+```bash
+/ng-nav:index /mnt/c/Users/knimi/OneDrive/Documents/Gyglers.UI/Olympus.Gyglers.UI/src/app --local
+```
+
+**Or store in plugin directory:**
 ```bash
 /ng-nav:index /mnt/c/Users/knimi/OneDrive/Documents/Gyglers.UI/Olympus.Gyglers.UI/src/app
 ```
 
 **Output:**
 ```
+Using local project directory: .../Olympus.Gyglers.UI/nav
 Scanning Angular project...
 Found 262 TypeScript files
 
@@ -31,10 +38,13 @@ Indexing complete:
 ...
 
 Generated 262 summaries
-Index ready at ~/.claude/plugins/repos/ng-nav/nav/
+Index ready at .../Olympus.Gyglers.UI/nav/
 ```
 
-**Note:** Only run this once, or when your codebase changes significantly.
+**Note:**
+- Use `--local` to store nav files in your project (excluded from git via .gitignore)
+- Only run this once, or when your codebase changes significantly
+- Each developer can generate their own index
 
 ## Daily Usage
 
