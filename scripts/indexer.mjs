@@ -17,9 +17,11 @@ import {
   getFileName,
   generateNodeId,
   truncate,
-  extractClassName
+  extractClassName,
+  extractJSDoc
 } from './utils.mjs';
 import { encodingForModel } from 'js-tiktoken';
+import Anthropic from '@anthropic-ai/sdk';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PLUGIN_ROOT = path.join(__dirname, '..');
@@ -38,6 +40,69 @@ if (outputFlagIndex !== -1 && process.argv[outputFlagIndex + 1]) {
 }
 
 const SUMMARIES_DIR = path.join(NAV_DIR, 'summaries');
+
+// Check for --no-llm flag to skip AI summarization
+const USE_LLM = !process.argv.includes('--no-llm');
+
+// Initialize Anthropic client if API key available
+let anthropic = null;
+if (USE_LLM && process.env.ANTHROPIC_API_KEY) {
+  anthropic = new Anthropic({
+    apiKey: process.env.ANTHROPIC_API_KEY
+  });
+}
+
+/**
+ * Sleep utility for rate limiting
+ */
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Generate AI summary of component/service using Claude
+ */
+async function generateAISummary(content, fileType, className) {
+  if (!anthropic) {
+    return null;
+  }
+
+  try {
+    const prompt = `Analyze this Angular ${fileType} and provide a concise summary.
+
+File: ${className}
+Type: ${fileType}
+
+Code:
+\`\`\`typescript
+${content.substring(0, 8000)} // Limit to ~8K chars for API
+\`\`\`
+
+Provide a 2-3 sentence summary covering:
+1. Primary purpose/responsibility
+2. Key features or functionality
+3. Main dependencies or integrations (if notable)
+
+Be concise and focus on WHAT it does, not HOW it's implemented.`;
+
+    const message = await anthropic.messages.create({
+      model: 'claude-3-5-haiku-20241022',
+      max_tokens: 200,
+      messages: [{
+        role: 'user',
+        content: prompt
+      }]
+    });
+
+    // Rate limiting: wait 100ms between requests (max 10/sec)
+    await sleep(100);
+
+    return message.content[0].text.trim();
+  } catch (error) {
+    console.warn(`  Warning: AI summary failed for ${className}: ${error.message}`);
+    return null;
+  }
+}
 
 /**
  * Main indexer - scan Angular codebase and generate navigation artifacts
@@ -73,6 +138,14 @@ async function index(targetDir, navDir, summariesDir) {
 
   console.log(`Found ${tsFiles.length} TypeScript files`);
 
+  if (USE_LLM && anthropic) {
+    console.log(`AI summarization: Enabled (using Claude 3.5 Haiku)`);
+  } else if (USE_LLM && !anthropic) {
+    console.log(`AI summarization: Disabled (ANTHROPIC_API_KEY not set)`);
+  } else {
+    console.log(`AI summarization: Disabled (--no-llm flag)`);
+  }
+
   // Process each file
   const nodes = [];
   const edges = [];
@@ -90,7 +163,9 @@ async function index(targetDir, navDir, summariesDir) {
     totalSignals: 0,
     totalRxJS: 0,
     totalHTTP: 0,
-    totalCapacitor: 0
+    totalCapacitor: 0,
+    aiSummaries: 0,
+    jsdocComments: 0
   };
 
   for (const filePath of tsFiles) {
@@ -144,6 +219,11 @@ async function index(targetDir, navDir, summariesDir) {
 
       nodes.push(node);
 
+      // Show progress for AI summarization
+      if (USE_LLM && anthropic && nodes.length % 10 === 0) {
+        console.log(`  Processing: ${nodes.length}/${tsFiles.length} files...`);
+      }
+
       // Build dependency edges
       for (const dep of dependencies) {
         edges.push({
@@ -154,7 +234,7 @@ async function index(targetDir, navDir, summariesDir) {
       }
 
       // Generate summary
-      await generateSummary(node, content, filePath, summariesDir);
+      await generateSummary(node, content, filePath, summariesDir, stats);
 
     } catch (error) {
       console.warn(`Warning: Failed to process ${filePath}: ${error.message}`);
@@ -216,6 +296,9 @@ async function index(targetDir, navDir, summariesDir) {
   console.log(`- Total tokens: ${totalTokens.toLocaleString()}`);
   console.log(`- Total size: ${(totalBytes / 1024).toFixed(2)} KB`);
   console.log(`- Avg tokens/file: ${nodes.length > 0 ? Math.round(totalTokens / nodes.length) : 0}`);
+  console.log(`\nSummary generation:`);
+  console.log(`- AI summaries: ${stats.aiSummaries}/${nodes.length} files`);
+  console.log(`- JSDoc comments: ${stats.jsdocComments}/${nodes.length} files`);
   console.log(`\nGenerated ${nodes.length} summaries in ${summariesDir}`);
   console.log(`Index ready at ${navDir}`);
 }
@@ -223,7 +306,7 @@ async function index(targetDir, navDir, summariesDir) {
 /**
  * Generate markdown summary for a node
  */
-async function generateSummary(node, content, filePath, summariesDir) {
+async function generateSummary(node, content, filePath, summariesDir, stats) {
   const summaryFileName = node.id.replace(/:/g, '__') + '.md';
   const summaryPath = path.join(summariesDir, summaryFileName);
 
@@ -232,6 +315,24 @@ async function generateSummary(node, content, filePath, summariesDir) {
   summary += `**Path:** ${node.path}\n`;
   summary += `**Type:** ${node.type}\n`;
   summary += `**ID:** ${node.id}\n\n`;
+
+  // Extract JSDoc comment
+  const jsdoc = extractJSDoc(content);
+  if (jsdoc) {
+    summary += `## Description\n\n`;
+    summary += `${jsdoc}\n\n`;
+    stats.jsdocComments++;
+  }
+
+  // Generate AI summary if enabled
+  if (anthropic && USE_LLM) {
+    const aiSummary = await generateAISummary(content, node.type, node.name);
+    if (aiSummary) {
+      summary += `## Summary\n\n`;
+      summary += `${aiSummary}\n\n`;
+      stats.aiSummaries++;
+    }
+  }
 
   // Dependencies
   if (node.patterns.di.length > 0) {

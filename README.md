@@ -70,10 +70,28 @@ Token Usage:
 /ng-nav:index /mnt/c/Users/knimi/OneDrive/Documents/Gyglers.UI/Olympus.Gyglers.UI/src/app --local
 ```
 
+**AI-Powered Summaries (Recommended):**
+```bash
+# Set API key first
+export ANTHROPIC_API_KEY=your_api_key
+
+# Index with AI summarization
+/ng-nav:index /path/to/src/app --local
+
+# Skip AI summarization (faster, but less descriptive summaries)
+/ng-nav:index /path/to/src/app --local --no-llm
+```
+
+**Features:**
+- **AI Summaries** - Claude analyzes each file and generates functional descriptions
+- **JSDoc Extraction** - Pulls existing documentation from code comments
+- **Pattern Detection** - Identifies DI, signals, RxJS, HTTP calls, Capacitor usage
+- **Token Counting** - Accurate token estimation using js-tiktoken
+
 **Output (with --local):**
-- `<project-root>/nav/index.json` - Node catalog (components, services, guards)
+- `<project-root>/nav/index.json` - Node catalog (components, services, guards) with token counts
 - `<project-root>/nav/graph.json` - Dependency graph
-- `<project-root>/nav/summaries/*.md` - Per-node summaries (4500 char max)
+- `<project-root>/nav/summaries/*.md` - AI-generated summaries + JSDoc + patterns
 - `<project-root>/nav/.gitignore` - Excludes artifacts from git
 
 **Output (without --local):**

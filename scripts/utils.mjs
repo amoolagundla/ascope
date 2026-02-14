@@ -228,3 +228,28 @@ export function extractClassName(content) {
 
   return null;
 }
+
+/**
+ * Extract JSDoc comment from class/component
+ */
+export function extractJSDoc(content) {
+  // Match JSDoc block before class/component/function declaration
+  const jsdocPattern = /\/\*\*\s*([\s\S]*?)\*\/\s*(?:export\s+)?(?:class|function|const|@Component)/;
+  const match = content.match(jsdocPattern);
+
+  if (!match) {
+    return null;
+  }
+
+  // Clean up JSDoc formatting
+  const rawDoc = match[1];
+  const lines = rawDoc
+    .split('\n')
+    .map(line => line.trim())
+    .map(line => line.replace(/^\*\s?/, '')) // Remove leading asterisks
+    .filter(line => !line.startsWith('@')) // Remove @param, @returns etc
+    .filter(line => line.length > 0)
+    .join(' ');
+
+  return lines || null;
+}
