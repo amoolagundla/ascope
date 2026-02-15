@@ -10,7 +10,6 @@
   "author": "knimi",
   "license": "MIT",
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.74.0",
     "glob": "^13.0.3",
     "js-tiktoken": "^1.0.21"
   }
